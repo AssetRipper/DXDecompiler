@@ -65,7 +65,7 @@ namespace DXDecompiler.Chunks.Shex
 		public static string GetDescription(this GlobalFlags value)
 		{
 			string result = string.Empty;
-			foreach(Enum enumValue in Enum.GetValues(typeof(GlobalFlags)))
+			foreach(GlobalFlags enumValue in EnumPolyfill.GetValues<GlobalFlags>())
 				if((int)value > 0 && value.HasFlag(enumValue))
 				{
 					if(!string.IsNullOrEmpty(result))
@@ -142,7 +142,7 @@ namespace DXDecompiler.Chunks.Shex
 
 		public static NumberType GetNumberType(this OpcodeType type)
 		{
-			return type.GetAttributeValue<NumberTypeAttribute, NumberType>((a, v) =>
+			return type.GetAttributeValue<OpcodeType, NumberTypeAttribute, NumberType>((a, v) =>
 			{
 				if(!a.Any())
 					return NumberType.Unknown;

@@ -2,19 +2,19 @@
 using DXDecompiler.Chunks.Rdef;
 using DXDecompiler.Chunks.Shex;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace DXDecompiler.Chunks.Fx10
 {
 	public static class Extensions
 	{
+		//[return: DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields)]
 		public static Type GetAssignmentType(this EffectAssignmentType type)
 		{
-			return type.GetAttributeValue<AssignmentTypeAttribute, Type>((a, v) =>
+			return type.GetAttributeValue<EffectAssignmentType, AssignmentTypeAttribute, Type>((a, v) =>
 			{
-				if(!a.Any())
-					return null;
-				return a.First().Type;
+				return a.Length == 0 ? null : a.First().Type;
 			});
 		}
 

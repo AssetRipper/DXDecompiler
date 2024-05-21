@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 
@@ -14,9 +15,10 @@ namespace DXDecompiler.Chunks
 			AttributeValues = new Dictionary<Type, Dictionary<Type, Dictionary<Enum, Attribute[]>>>();
 		}
 
-		public static string GetDescription(this Enum value, ChunkType chunkType = ChunkType.Unknown)
+		public static string GetDescription<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields)] TEnum>(this TEnum value, ChunkType chunkType = ChunkType.Unknown)
+			where TEnum : struct, Enum
 		{
-			return value.GetAttributeValue<DescriptionAttribute, string>((a, v) =>
+			return value.GetAttributeValue<TEnum, DescriptionAttribute, string>((a, v) =>
 			{
 				var attribute = a.FirstOrDefault(x => x.ChunkType == chunkType);
 				if(attribute == null)
@@ -25,33 +27,40 @@ namespace DXDecompiler.Chunks
 			});
 		}
 
-		public static TValue GetAttributeValue<TAttribute, TValue>(this Enum value,
+		public static TValue GetAttributeValue<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields)] TEnum, TAttribute, TValue>(this Enum value,
 			Func<TAttribute[], Enum, TValue> getValueCallback)
+			where TEnum : struct, Enum
 			where TAttribute : Attribute
 		{
 			Type type = value.GetType();
 
-			if(!AttributeValues.ContainsKey(type))
-				AttributeValues[type] = new Dictionary<Type, Dictionary<Enum, Attribute[]>>();
-
-			var attributeValuesForType = AttributeValues[type];
+			if(!AttributeValues.TryGetValue(type, out var attributeValuesForType))
+			{
+				attributeValuesForType = new Dictionary<Type, Dictionary<Enum, Attribute[]>>();
+				AttributeValues[type] = attributeValuesForType;
+			}
 
 			var attributeType = typeof(TAttribute);
 			if(!attributeValuesForType.ContainsKey(attributeType))
-				attributeValuesForType[attributeType] = Enum.GetValues(type).Cast<Enum>().Distinct()
-					.ToDictionary(x => x, GetAttribute<TAttribute>);
+				attributeValuesForType[attributeType] = EnumPolyfill.GetValues<TEnum>().Distinct()
+					.ToDictionary(x => (Enum)x, GetAttribute<TEnum, TAttribute>);
 
 			var attributeValues = attributeValuesForType[attributeType];
-			if(!attributeValues.ContainsKey(value))
+			if(!attributeValues.TryGetValue(value, out Attribute[] attributeValue))
 				throw new ArgumentException(string.Format("Could not find attribute value for type '{0}' and value '{1}'.", type, value));
-			return getValueCallback((TAttribute[])attributeValues[value], value);
+			return getValueCallback((TAttribute[])attributeValue, value);
 		}
 
-		private static Attribute[] GetAttribute<TAttribute>(Enum value)
+		private static Attribute[] GetAttribute<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields)] TEnum, TAttribute>(TEnum value)
+			where TEnum : struct, Enum
 			where TAttribute : Attribute
 		{
-			FieldInfo field = value.GetType().GetField(value.ToString());
-			return Attribute.GetCustomAttributes(field, typeof(TAttribute));
+			return GetAttribute(typeof(TEnum), value.ToString(), typeof(TAttribute));
+		}
+
+		private static Attribute[] GetAttribute([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields)] Type enumType, string field, Type attributeType)
+		{
+			return Attribute.GetCustomAttributes(enumType.GetField(field), attributeType);
 		}
 	}
 }

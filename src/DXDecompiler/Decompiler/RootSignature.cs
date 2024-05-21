@@ -2,6 +2,7 @@
 using DXDecompiler.Chunks.RTS0;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -22,12 +23,12 @@ namespace DXDecompiler.Decompiler
 			output.AppendLine(@"#define RS1 \");
 			output.AppendLine(result);
 		}
-		string FormatFlags<T>(T value) where T : Enum
+		static string FormatFlags<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields)] T>(T value) where T : struct, Enum
 		{
 			List<string> result = new List<string>();
-			foreach(Enum v in Enum.GetValues(typeof(T)))
+			foreach(T v in EnumPolyfill.GetValues<T>())
 			{
-				if((int)(ValueType)v == 0)
+				if(IsDefault(v))
 				{
 					continue;
 				}
@@ -37,6 +38,10 @@ namespace DXDecompiler.Decompiler
 				}
 			}
 			return string.Join(" | ", result);
+		}
+		private static bool IsDefault<T>(T value)
+		{
+			return EqualityComparer<T>.Default.Equals(value, default);
 		}
 		string RootSignatureToString(RootSignatureChunk signature, int indent = 0)
 		{

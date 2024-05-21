@@ -37,6 +37,7 @@ namespace DXDecompiler.Chunks.Fx10
 			if(type.IsEnum && scalarType == EffectScalarType.Int)
 			{
 				var enumValue = (Enum)Enum.ToObject(type, value.UInt);
+				//var description = Enum.GetName(type, enumValue);
 				var description = EnumExtensions.GetDescription(enumValue);
 				return string.Format("{0} /* {1} */", description, value.UInt);
 			}
